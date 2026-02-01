@@ -65,7 +65,7 @@ Program ini mengimplementasikan seluruh konsep fundamental C++ sesuai spesifikas
 1.  **Kompilasi**:
     Gunakan kompiler C++ (g++) di terminal Anda:
     ```bash
-    g++ main.cpp -o /build/LaundryExpress
+    g++ src/main.cpp -o build/LaundryExpress
     ```
 2.  **Eksekusi**:
     Jalankan file binary yang dihasilkan:
