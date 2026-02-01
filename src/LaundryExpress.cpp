@@ -1,5 +1,6 @@
 #include <string>
 #include <iostream>
+#include <iomanip>
 
 using namespace std;
 
@@ -151,4 +152,35 @@ reEnterPriority:
   orderQty++;
   cout << "Order added successfully!\n"
        << newOrder.totalPrice << endl;
+}
+
+void showDashboard()
+{
+  cout << "\n======================== DASHBOARD LAUNDRY EXPRESS PRO ========================" << endl;
+
+  cout << left << setw(4) << "ID"
+       << " | " << setw(15) << "Name"
+       << " | " << setw(8) << "Weight"
+       << " | " << setw(12) << "Status"
+       << " | " << setw(5) << "Prio"
+       << " | " << "Timeline" << endl;
+
+  cout << string(79, '-') << endl;
+
+  for (int i = 0; i < orderQty; i++)
+  {
+    cout << left << setw(4) << database[i].id
+         << " | " << setw(15) << (database[i].customerName.length() > 14 ? database[i].customerName.substr(0, 12) + ".." : database[i].customerName)
+         << " | " << setw(5) << fixed << setprecision(1) << database[i].weight << " kg"
+         << " | " << setw(12) << database[i].status
+         << " | " << setw(5) << database[i].priority
+         << " | ";
+
+    for (int j = 0; j < 5; j++)
+    {
+      cout << timelineStatus[i][j] << " ";
+    }
+    cout << endl;
+  }
+  cout << string(79, '-') << endl;
 }
