@@ -1,6 +1,7 @@
 #include <string>
 #include <iostream>
 #include <iomanip>
+#include <algorithm>
 
 using namespace std;
 
@@ -197,4 +198,25 @@ void sort_by_priority(LaundryOrder *orders, int size)
       }
     }
   }
+}
+
+void searchCustomer(string query)
+{
+  cout << "\n--- Search Result: " << query << " ---" << endl;
+  bool found = false;
+  for (int i = 0; i < orderQty; i++)
+  {
+    string nama = database[i].customerName;
+    transform(nama.begin(), nama.end(), nama.begin(), ::tolower);
+    transform(query.begin(), query.end(), query.begin(), ::tolower);
+
+    if (nama.find(query) != string::npos)
+    {
+      cout << "[ID: " << database[i].id << "] " << database[i].customerName
+           << " - Status: " << database[i].status << endl;
+      found = true;
+    }
+  }
+  if (!found)
+    cout << "Customer not found." << endl;
 }

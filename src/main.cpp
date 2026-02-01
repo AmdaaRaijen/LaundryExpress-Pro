@@ -30,6 +30,8 @@ int main()
             string q;
             cout << "Search Name: ";
             cin >> q;
+            searchCustomer(q);
+            break;
         }
         case 5:
             cout << "\n--- Business Report ---";
