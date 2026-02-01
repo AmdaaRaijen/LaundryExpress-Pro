@@ -13,9 +13,9 @@ struct LaundryOrder
   string clothingType;
   float weight;
   string serviceType; // Express, Fast, Normal
-  int priority; // 1-5
+  int priority;       // 1-5
   double totalPrice;
-  string status; // Waiting, Washing, Drying, Ironing, Finished
+  string status;               // Waiting, Washing, Drying, Ironing, Finished
   int estimatedCompletionTime; // in hours
 };
 
@@ -24,6 +24,48 @@ LaundryOrder database[MAX_ORDERS];
 
 int orderQty = 0;
 
+double calculatePrice(float weight, const string &serviceType, const string &clothingType, const string &customerName)
+{
+  double serviceMultiplier = 1.0;
+  double clothingMultiplier = 1.0;
+
+  if (serviceType == "Express")
+    serviceMultiplier = 2.0;
+  else if (serviceType == "Fast")
+    serviceMultiplier = 1.5;
+
+  if (clothingType == "Pants")
+    clothingMultiplier = 1.2;
+  else if (clothingType == "Jacket")
+    clothingMultiplier = 1.5;
+  else if (clothingType == "Blanket")
+    clothingMultiplier = 2.0;
+  else if (clothingType == "Other")
+    clothingMultiplier = 1.3;
+
+  double total = BASE_PRICE * weight * serviceMultiplier * clothingMultiplier;
+
+  // 10% discount for weight over 10 kg
+  if (weight > 10.0)
+    total *= 0.9;
+
+  int count = 0;
+
+  // Apply 15% discount for customers with more than 2 orders
+  for (int i = 0; i < orderQty; i++)
+  {
+    if (database[i].customerName == customerName)
+      count++;
+  }
+
+  cout << "Order count for " << customerName << ": " << count << endl;
+
+  if (count > 1)
+    total *= 0.85;
+
+  return total;
+}
+
 void inputOrder()
 {
   if (orderQty >= MAX_ORDERS)
@@ -31,15 +73,12 @@ void inputOrder()
     cout << "Order is full. Cannot add new order.\n";
     return;
   }
-  
-  LaundryOrder newOrder;
 
-  double serviceMultiplier = 1.0;
-  double chlothingMultiplier = 1.0;
+  LaundryOrder newOrder;
   newOrder.id = orderQty + 1;
 
-  reEnterName:
-  
+reEnterName:
+
   cout << "\n--- New Input Order ---" << endl;
 
   cout << "Customer Name: ";
@@ -58,7 +97,7 @@ void inputOrder()
     goto reEnterName;
   }
 
-  reEnterClothing:
+reEnterClothing:
   cout << "Clothing Type (Shirt/Pants/Jacket/Blanket/Other): ";
   getline(cin, newOrder.clothingType);
 
@@ -68,16 +107,7 @@ void inputOrder()
     goto reEnterClothing;
   }
 
-  if(newOrder.clothingType == "Pants" || newOrder.clothingType == "Shirt")
-    chlothingMultiplier = 1.2;
-  else if(newOrder.clothingType == "Jacket")
-    chlothingMultiplier = 1.5;
-  else if(newOrder.clothingType == "Blanket")
-    chlothingMultiplier = 2.0;
-  else if(newOrder.clothingType != "Other")
-    chlothingMultiplier = 1.3;
-
-  reEnterWeight:
+reEnterWeight:
   cout << "Weight (0.5 - 20 kg): ";
   cin >> newOrder.weight;
 
@@ -87,7 +117,7 @@ void inputOrder()
     goto reEnterWeight;
   }
 
-  reEnterService:
+reEnterService:
   cout << "Service Type (Express/Fast/Normal): ";
   cin >> newOrder.serviceType;
 
@@ -97,12 +127,7 @@ void inputOrder()
     goto reEnterService;
   }
 
-  if (newOrder.serviceType == "Express")
-    serviceMultiplier = 2;
-  else if (newOrder.serviceType == "Fast")
-    serviceMultiplier = 1.5;
-
-  reEnterPriority:
+reEnterPriority:
   cout << "Priority (1-5, 1 is highest): ";
   cin >> newOrder.priority;
 
@@ -112,8 +137,8 @@ void inputOrder()
     goto reEnterPriority;
   }
 
+  newOrder.totalPrice = calculatePrice(newOrder.weight, newOrder.serviceType, newOrder.clothingType, newOrder.customerName);
 
-  newOrder.totalPrice = BASE_PRICE * newOrder.weight * serviceMultiplier * chlothingMultiplier;
   newOrder.status = "Waiting";
   database[orderQty] = newOrder;
 
@@ -124,5 +149,6 @@ void inputOrder()
   timelineStatus[orderQty][4] = "-"; // Finished
 
   orderQty++;
-  cout << "Order added successfully!\n" << newOrder.totalPrice << endl;
+  cout << "Order added successfully!\n"
+       << newOrder.totalPrice << endl;
 }
