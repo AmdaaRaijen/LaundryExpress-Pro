@@ -1,4 +1,5 @@
 #include <string>
+#include <iostream>
 
 using namespace std;
 
@@ -11,14 +12,117 @@ struct LaundryOrder
   string customerName;
   string clothingType;
   float weight;
-  string serviceType;
+  string serviceType; // Express, Fast, Normal
   int priority; // 1-5
   double totalPrice;
   string status; // Waiting, Washing, Drying, Ironing, Finished
   int estimatedCompletionTime; // in hours
 };
 
-string timelineStatus[MAX_ORDERS];
+string timelineStatus[MAX_ORDERS][5];
 LaundryOrder database[MAX_ORDERS];
 
-int jumlahOrder = 0;
+int orderQty = 0;
+
+void inputOrder()
+{
+  if (orderQty >= MAX_ORDERS)
+  {
+    cout << "Order is full. Cannot add new order.\n";
+    return;
+  }
+  
+  LaundryOrder newOrder;
+
+  double serviceMultiplier = 1.0;
+  double chlothingMultiplier = 1.0;
+  newOrder.id = orderQty + 1;
+
+  reEnterName:
+  
+  cout << "\n--- New Input Order ---" << endl;
+
+  cout << "Customer Name: ";
+  cin.ignore();
+  getline(cin, newOrder.customerName);
+
+  if (newOrder.customerName.empty())
+  {
+    cout << "Customer name cannot be empty. Order not added.\n";
+    goto reEnterName;
+  }
+
+  if (newOrder.customerName.length() > 50)
+  {
+    cout << "Customer name is too long. Maximum 50 characters allowed. Order not added.\n";
+    goto reEnterName;
+  }
+
+  reEnterClothing:
+  cout << "Clothing Type (Shirt/Pants/Jacket/Blanket/Other): ";
+  getline(cin, newOrder.clothingType);
+
+  if (newOrder.clothingType.empty())
+  {
+    cout << "Clothing type cannot be empty. Order not added.\n";
+    goto reEnterClothing;
+  }
+
+  if(newOrder.clothingType == "Pants" || newOrder.clothingType == "Shirt")
+    chlothingMultiplier = 1.2;
+  else if(newOrder.clothingType == "Jacket")
+    chlothingMultiplier = 1.5;
+  else if(newOrder.clothingType == "Blanket")
+    chlothingMultiplier = 2.0;
+  else if(newOrder.clothingType != "Other")
+    chlothingMultiplier = 1.3;
+
+  reEnterWeight:
+  cout << "Weight (0.5 - 20 kg): ";
+  cin >> newOrder.weight;
+
+  if (newOrder.weight < 0.5 || newOrder.weight > 20.0)
+  {
+    cout << "Invalid weight. Must be between 0.5 and 20 kg. Order not added.\n";
+    goto reEnterWeight;
+  }
+
+  reEnterService:
+  cout << "Service Type (Express/Fast/Normal): ";
+  cin >> newOrder.serviceType;
+
+  if (newOrder.serviceType != "Express" && newOrder.serviceType != "Fast" && newOrder.serviceType != "Normal")
+  {
+    cout << "Invalid service type. Order not added.\n";
+    goto reEnterService;
+  }
+
+  if (newOrder.serviceType == "Express")
+    serviceMultiplier = 2;
+  else if (newOrder.serviceType == "Fast")
+    serviceMultiplier = 1.5;
+
+  reEnterPriority:
+  cout << "Priority (1-5, 1 is highest): ";
+  cin >> newOrder.priority;
+
+  if (newOrder.priority < 1 || newOrder.priority > 5)
+  {
+    cout << "Invalid priority. Must be between 1 and 5. Order not added.\n";
+    goto reEnterPriority;
+  }
+
+
+  newOrder.totalPrice = BASE_PRICE * newOrder.weight * serviceMultiplier * chlothingMultiplier;
+  newOrder.status = "Waiting";
+  database[orderQty] = newOrder;
+
+  timelineStatus[orderQty][0] = "v"; // Waiting
+  timelineStatus[orderQty][1] = "-"; // Washing
+  timelineStatus[orderQty][2] = "-"; // Drying
+  timelineStatus[orderQty][3] = "-"; // Ironing
+  timelineStatus[orderQty][4] = "-"; // Finished
+
+  orderQty++;
+  cout << "Order added successfully!\n" << newOrder.totalPrice << endl;
+}

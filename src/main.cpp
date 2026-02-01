@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include "LaundryExpress.cpp"
 
 using namespace std;
 
@@ -11,7 +12,7 @@ int main() {
         cout << "\nPilihan: "; cin >> pilihan;
 
         switch (pilihan) {
-            case 1: cout << "\n--- Input Order ---"; break;
+            case 1: inputOrder(); break;
             case 2: cout << "\n--- Show Dashboard ---"; break;
             case 3: 
                 cout << "Queue has been optimized.\n";
