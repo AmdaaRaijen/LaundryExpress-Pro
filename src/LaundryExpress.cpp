@@ -1,180 +1,440 @@
-#include <string>
 #include <iostream>
+#include <string>
+#include <vector>
 #include <iomanip>
 #include <algorithm>
+#include <cctype>
 
 using namespace std;
 
 const int MAX_ORDERS = 100;
 const int BASE_PRICE = 5000;
 
-struct LaundryOrder
+struct Order
 {
   int id;
   string customerName;
-  string clothingType;
+  string clothesType; // Baju, Celana, Jaket, dll.
   float weight;
   string serviceType; // Express, Fast, Normal
-  int priority;       // 1-5
-  double totalPrice;
-  string status;               // Waiting, Washing, Drying, Ironing, Finished
-  int estimatedCompletionTime; // in hours
+  int priority;       // 1 (Urgent) - 5 (Relaxed)
+  double finalPrice;
+  string status;     // Menunggu, Dicuci, Dikeringkan, Disetrika, Selesai
+  int estimatedTime; // Dalam jam
 };
 
+Order orders[MAX_ORDERS];
 string timelineStatus[MAX_ORDERS][5];
-LaundryOrder database[MAX_ORDERS];
+int orderCount = 0;
+int nextId = 1;
 
-int orderQty = 0;
+const string STAGES[5] = {"Menunggu", "Dicuci", "Dikeringkan", "Disetrika", "Selesai"};
 
-double calculatePrice(float weight, const string &serviceType, const string &clothingType, const string &customerName)
+void inputOrder();
+void processOrder();
+void searchOrder();
+void calculateEstimate();
+void generateReport();
+void optimizeOrder();
+void showDashboard();
+void resetData();
+double calculatePrice(float weight, string type, string service, string name);
+void predictTimeRecursive(int timeLeft);
+void sort_by_priority(int *order_indices, int size);
+void suggest_machine(string type, float weight, int *machine_id);
+
+string toLowerCase(string str)
 {
-  double serviceMultiplier = 1.0;
-  double clothingMultiplier = 1.0;
-
-  if (serviceType == "Express")
-    serviceMultiplier = 2.0;
-  else if (serviceType == "Fast")
-    serviceMultiplier = 1.5;
-
-  if (clothingType == "Pants")
-    clothingMultiplier = 1.2;
-  else if (clothingType == "Jacket")
-    clothingMultiplier = 1.5;
-  else if (clothingType == "Blanket")
-    clothingMultiplier = 2.0;
-  else if (clothingType == "Other")
-    clothingMultiplier = 1.3;
-
-  double total = BASE_PRICE * weight * serviceMultiplier * clothingMultiplier;
-
-  // 10% discount for weight over 10 kg
-  if (weight > 10.0)
-    total *= 0.9;
-
-  int count = 0;
-
-  // Apply 15% discount for customers with more than 2 orders
-  for (int i = 0; i < orderQty; i++)
-  {
-    if (database[i].customerName == customerName)
-      count++;
-  }
-
-  cout << "Order count for " << customerName << ": " << count << endl;
-
-  if (count > 1)
-    total *= 0.85;
-
-  return total;
+  transform(str.begin(), str.end(), str.begin(), ::tolower);
+  return str;
 }
 
 void inputOrder()
 {
-  if (orderQty >= MAX_ORDERS)
+  if (orderCount >= MAX_ORDERS)
   {
-    cout << "Order is full. Cannot add new order.\n";
+    cout << "Kapasitas penuh!" << endl;
     return;
   }
 
-  LaundryOrder newOrder;
-  newOrder.id = orderQty + 1;
+  Order newOrder;
+  newOrder.id = nextId++;
+  newOrder.status = "Menunggu";
 
-reEnterName:
+  cout << "\n--- INPUT ORDER BARU ---" << endl;
 
-  cout << "\n--- New Input Order ---" << endl;
+  do
+  {
+    cout << "Nama Pelanggan (Max 50 char): ";
+    getline(cin, newOrder.customerName);
+  } while (newOrder.customerName.length() > 50 || newOrder.customerName.empty());
 
-  cout << "Customer Name: ";
+  cout << "Jenis: 1.Baju, 2.Celana, 3.Jaket, 4.Selimut, 5.Lainnya" << endl;
+  int typeChoice;
+  cout << "Pilih Jenis (1-5): ";
+  cin >> typeChoice;
+  switch (typeChoice)
+  {
+  case 1:
+    newOrder.clothesType = "Baju";
+    break;
+  case 2:
+    newOrder.clothesType = "Celana";
+    break;
+  case 3:
+    newOrder.clothesType = "Jaket";
+    break;
+  case 4:
+    newOrder.clothesType = "Selimut";
+    break;
+  default:
+    newOrder.clothesType = "Lainnya";
+    break;
+  }
+
+  do
+  {
+    cout << "Berat (0.5 - 20 kg): ";
+    cin >> newOrder.weight;
+    if (newOrder.weight < 0.5 || newOrder.weight > 20)
+    {
+      cout << "Berat tidak valid! ";
+    }
+  } while (newOrder.weight < 0.5 || newOrder.weight > 20);
+
+  cout << "Layanan: 1.Express (3jam), 2.Fast (6jam), 3.Normal (24jam)" << endl;
+  int servChoice;
+  cout << "Pilih Layanan: ";
+  cin >> servChoice;
+  switch (servChoice)
+  {
+  case 1:
+    newOrder.serviceType = "Express";
+    newOrder.estimatedTime = 3;
+    break;
+  case 2:
+    newOrder.serviceType = "Fast";
+    newOrder.estimatedTime = 6;
+    break;
+  default:
+    newOrder.serviceType = "Normal";
+    newOrder.estimatedTime = 24;
+    break;
+  }
+
+  do
+  {
+    cout << "Prioritas (1 Tertinggi - 5 Terendah): ";
+    cin >> newOrder.priority;
+  } while (newOrder.priority < 1 || newOrder.priority > 5);
+
+  newOrder.finalPrice = calculatePrice(newOrder.weight, newOrder.clothesType, newOrder.serviceType, newOrder.customerName);
+
+  timelineStatus[orderCount][0] = "[Active]";
+  for (int j = 1; j < 5; j++)
+  {
+    timelineStatus[orderCount][j] = "[ ]";
+  }
+
+  orders[orderCount] = newOrder;
+  orderCount++;
+  cout << "Order berhasil ditambahkan! Total Biaya: Rp " << (long)newOrder.finalPrice << endl;
+}
+
+double calculatePrice(float weight, string type, string service, string name)
+{
+  double price = weight * BASE_PRICE;
+
+  if (type == "Celana")
+    price *= 1.2;
+  else if (type == "Jaket")
+    price *= 1.5;
+  else if (type == "Selimut")
+    price *= 2.0;
+  else if (type == "Lainnya")
+    price *= 1.3;
+
+  if (service == "Express")
+    price *= 2.0;
+  else if (service == "Fast")
+    price *= 1.5;
+
+  if (weight > 10)
+  {
+    price *= 0.9; // Diskon 10%
+    cout << "[Info] Mendapat diskon berat 10%!" << endl;
+  }
+
+  int customerOrderCount = 0;
+  for (int i = 0; i < orderCount; i++)
+  {
+    if (orders[i].customerName == name)
+      customerOrderCount++;
+  }
+  if (customerOrderCount == 2)
+  {
+    price *= 0.85; // Diskon 15%
+    cout << "[Info] Lucky! Order ke-3 diskon 15%!" << endl;
+  }
+
+  return price;
+}
+
+void processOrder()
+{
+  showDashboard();
+
+  int idToUpdate;
+  cout << "\nMasukkan ID Order untuk update status (0 kembali): ";
+  cin >> idToUpdate;
+
+  if (idToUpdate == 0)
+    return;
+
+  for (int i = 0; i < orderCount; i++)
+  {
+    if (orders[i].id == idToUpdate)
+    {
+
+      // Cek status saat ini ada di index mana
+      int currentStageIndex = -1;
+      for (int s = 0; s < 5; s++)
+      {
+        if (orders[i].status == STAGES[s])
+        {
+          currentStageIndex = s;
+          break;
+        }
+      }
+
+      if (currentStageIndex != -1 && currentStageIndex < 4)
+      {
+        orders[i].status = STAGES[currentStageIndex + 1];
+
+        timelineStatus[i][currentStageIndex] = "[Done]  ";
+        timelineStatus[i][currentStageIndex + 1] = "[Active]";
+
+        cout << "Status berhasil diupdate ke: " << orders[i].status << endl;
+      }
+      else
+      {
+        cout << "Order sudah selesai atau status tidak valid." << endl;
+      }
+      return;
+    }
+  }
+  cout << "ID tidak ditemukan." << endl;
+}
+
+void sort_by_priority(int *order_indices, int size)
+{
+  for (int i = 0; i < size - 1; i++)
+  {
+    for (int j = 0; j < size - i - 1; j++)
+    {
+      if (orders[order_indices[j]].priority > orders[order_indices[j + 1]].priority)
+      {
+        int temp = *(order_indices + j);
+        *(order_indices + j) = *(order_indices + j + 1);
+        *(order_indices + j + 1) = temp;
+      }
+    }
+  }
+}
+
+void suggest_machine(string type, float weight, int *machine_id)
+{
+  if (type == "Selimut" || weight > 8.0)
+  {
+    *machine_id = 1; // Heavy Duty
+  }
+  else
+  {
+    *machine_id = 2; // Standard
+  }
+}
+
+void optimizeOrder()
+{
+  if (orderCount == 0)
+  {
+    cout << "Data kosong.\n";
+    return;
+  }
+
+  int *indices = new int[orderCount];
+  for (int i = 0; i < orderCount; i++)
+    indices[i] = i;
+
+  sort_by_priority(indices, orderCount);
+
+  cout << "\n--- SARAN URUTAN PENCUCIAN (PRIORITAS) ---" << endl;
+  cout << "No. \t ID \t Prio \t Mesin Rekomendasi" << endl;
+
+  for (int i = 0; i < orderCount; i++)
+  {
+    int idx = indices[i];
+    if (orders[idx].status == "Selesai")
+      continue;
+
+    int recommendedMachine;
+    suggest_machine(orders[idx].clothesType, orders[idx].weight, &recommendedMachine);
+
+    cout << (i + 1) << ".\t " << orders[idx].id << "\t "
+         << orders[idx].priority << "\t "
+         << (recommendedMachine == 1 ? "Mesin Besar (1)" : "Mesin Std (2)") << endl;
+  }
+
+  delete[] indices; // Hapus memory dinamis
+}
+
+void searchOrder()
+{
+  cout << "\n--- CARI ORDER ---" << endl;
+  cout << "1. Berdasarkan Nama" << endl;
+  cout << "2. Berdasarkan Status" << endl;
+  int method;
+  cin >> method;
   cin.ignore();
-  getline(cin, newOrder.customerName);
 
-  if (newOrder.customerName.empty())
+  if (method == 1)
   {
-    cout << "Customer name cannot be empty. Order not added.\n";
-    goto reEnterName;
+    string keyword;
+    cout << "Masukkan nama: ";
+    getline(cin, keyword);
+    keyword = toLowerCase(keyword);
+
+    bool found = false;
+    for (int i = 0; i < orderCount; i++)
+    {
+      string nameLower = toLowerCase(orders[i].customerName);
+      if (nameLower.find(keyword) != string::npos)
+      {
+        cout << "Order ID: " << orders[i].id << " | " << orders[i].customerName
+             << " | " << orders[i].status << endl;
+        found = true;
+      }
+    }
+    if (!found)
+      cout << "Tidak ditemukan." << endl;
+  }
+  else if (method == 2)
+  {
+    string statKey;
+    cout << "Masukkan Status (Menunggu/Dicuci/dll): ";
+    getline(cin, statKey);
+
+    cout << "Hasil Status '" << statKey << "': ";
+    for (int i = 0; i < orderCount; i++)
+    {
+      if (toLowerCase(orders[i].status) == toLowerCase(statKey))
+      {
+        cout << orders[i].id << ", ";
+      }
+    }
+    cout << endl;
+  }
+}
+
+void predictTimeRecursive(int timeLeft)
+{
+  if (timeLeft <= 0)
+  {
+    cout << "Selesai sekarang!" << endl;
+    return;
+  }
+  cout << "T-" << timeLeft << " jam... ";
+  predictTimeRecursive(timeLeft - 1);
+}
+
+void calculateEstimate()
+{
+  int idCari;
+  cout << "Masukkan ID Order: ";
+  cin >> idCari;
+
+  for (int i = 0; i < orderCount; i++)
+  {
+    if (orders[i].id == idCari)
+    {
+      cout << "Estimasi Biaya: Rp " << (long)orders[i].finalPrice << endl;
+      cout << "Estimasi Waktu Total: " << orders[i].estimatedTime << " Jam" << endl;
+      cout << "Countdown Simulasi: ";
+      predictTimeRecursive(3); // Simulasi hitung mundur 3 jam terakhir
+      cout << endl;
+      return;
+    }
+  }
+  cout << "ID tidak ditemukan." << endl;
+}
+
+void generateReport()
+{
+  if (orderCount == 0)
+  {
+    cout << "[ERROR] Tidak ada data transaksi untuk dianalisis." << endl;
   }
 
-  if (newOrder.customerName.length() > 50)
+  double totalRevenue = 0;
+  float totalWeight = 0;
+  int expressCount = 0;
+
+  cout << "\n--- LAPORAN HARIAN ---" << endl;
+
+  for (int i = 0; i < orderCount; i++)
   {
-    cout << "Customer name is too long. Maximum 50 characters allowed. Order not added.\n";
-    goto reEnterName;
+    if (orders[i].weight <= 0)
+      continue;
+
+    totalRevenue += orders[i].finalPrice;
+    totalWeight += orders[i].weight;
+    if (orders[i].serviceType == "Express")
+      expressCount++;
+
+    if (i == 50)
+      break;
   }
 
-reEnterClothing:
-  cout << "Clothing Type (Shirt/Pants/Jacket/Blanket/Other): ";
-  getline(cin, newOrder.clothingType);
+  cout << "1. Total Pendapatan: Rp " << (long)totalRevenue << endl;
+  cout << "2. Rata-rata Berat: " << (totalWeight / orderCount) << " kg/order" << endl;
+  cout << "3. Order Express: " << expressCount << endl;
 
-  if (newOrder.clothingType.empty())
-  {
-    cout << "Clothing type cannot be empty. Order not added.\n";
-    goto reEnterClothing;
-  }
-
-reEnterWeight:
-  cout << "Weight (0.5 - 20 kg): ";
-  cin >> newOrder.weight;
-
-  if (newOrder.weight < 0.5 || newOrder.weight > 20.0)
-  {
-    cout << "Invalid weight. Must be between 0.5 and 20 kg. Order not added.\n";
-    goto reEnterWeight;
-  }
-
-reEnterService:
-  cout << "Service Type (Express/Fast/Normal): ";
-  cin >> newOrder.serviceType;
-
-  if (newOrder.serviceType != "Express" && newOrder.serviceType != "Fast" && newOrder.serviceType != "Normal")
-  {
-    cout << "Invalid service type. Order not added.\n";
-    goto reEnterService;
-  }
-
-reEnterPriority:
-  cout << "Priority (1-5, 1 is highest): ";
-  cin >> newOrder.priority;
-
-  if (newOrder.priority < 1 || newOrder.priority > 5)
-  {
-    cout << "Invalid priority. Must be between 1 and 5. Order not added.\n";
-    goto reEnterPriority;
-  }
-
-  newOrder.totalPrice = calculatePrice(newOrder.weight, newOrder.serviceType, newOrder.clothingType, newOrder.customerName);
-
-  newOrder.status = "Waiting";
-  database[orderQty] = newOrder;
-
-  timelineStatus[orderQty][0] = "v"; // Waiting
-  timelineStatus[orderQty][1] = "-"; // Washing
-  timelineStatus[orderQty][2] = "-"; // Drying
-  timelineStatus[orderQty][3] = "-"; // Ironing
-  timelineStatus[orderQty][4] = "-"; // Finished
-
-  orderQty++;
-  cout << "Order added successfully!\n"
-       << newOrder.totalPrice << endl;
+  cout << "4. Analisis selesai." << endl;
+  return;
 }
 
 void showDashboard()
 {
+  if (orderCount == 0)
+  {
+    cout << "\n[Info] Belum ada data order." << endl;
+    return;
+  }
+
   cout << "\n======================== DASHBOARD LAUNDRY EXPRESS PRO ========================" << endl;
 
+  // Header
   cout << left << setw(4) << "ID"
        << " | " << setw(15) << "Name"
        << " | " << setw(8) << "Weight"
        << " | " << setw(12) << "Status"
        << " | " << setw(5) << "Prio"
-       << " | " << "Timeline" << endl;
+       << " | " << "Timeline (Mng-Cuci-Krg-Str-Sls)" << endl;
 
-  cout << string(79, '-') << endl;
+  cout << string(95, '-') << endl;
 
-  for (int i = 0; i < orderQty; i++)
+  for (int i = 0; i < orderCount; i++)
   {
-    cout << left << setw(4) << database[i].id
-         << " | " << setw(15) << (database[i].customerName.length() > 14 ? database[i].customerName.substr(0, 12) + ".." : database[i].customerName)
-         << " | " << setw(5) << fixed << setprecision(1) << database[i].weight << " kg"
-         << " | " << setw(12) << database[i].status
-         << " | " << setw(5) << database[i].priority
+    if (orders[i].id == 0)
+      continue;
+
+    string displayName = (orders[i].customerName.length() > 14) ? orders[i].customerName.substr(0, 12) + ".." : orders[i].customerName;
+
+    cout << left << setw(4) << orders[i].id
+         << " | " << setw(15) << displayName
+         << " | " << setw(5) << fixed << setprecision(1) << orders[i].weight << " kg"
+         << " | " << setw(12) << orders[i].status
+         << " | " << setw(5) << orders[i].priority
          << " | ";
 
     for (int j = 0; j < 5; j++)
@@ -183,40 +443,18 @@ void showDashboard()
     }
     cout << endl;
   }
-  cout << string(79, '-') << endl;
+  cout << string(95, '-') << endl;
 }
 
-void sort_by_priority(LaundryOrder *orders, int size)
+void resetData()
 {
-  for (int i = 0; i < size - 1; i++)
+  char confirm;
+  cout << "Reset semua data hari ini? (y/n): ";
+  cin >> confirm;
+  if (confirm == 'y' || confirm == 'Y')
   {
-    for (int j = 0; j < size - i - 1; j++)
-    {
-      if ((orders + j)->priority > (orders + j + 1)->priority)
-      {
-        swap(*(orders + j), *(orders + j + 1));
-      }
-    }
+    orderCount = 0;
+    nextId = 1;
+    cout << "Data berhasil direset!" << endl;
   }
-}
-
-void searchCustomer(string query)
-{
-  cout << "\n--- Search Result: " << query << " ---" << endl;
-  bool found = false;
-  for (int i = 0; i < orderQty; i++)
-  {
-    string nama = database[i].customerName;
-    transform(nama.begin(), nama.end(), nama.begin(), ::tolower);
-    transform(query.begin(), query.end(), query.begin(), ::tolower);
-
-    if (nama.find(query) != string::npos)
-    {
-      cout << "[ID: " << database[i].id << "] " << database[i].customerName
-           << " - Status: " << database[i].status << endl;
-      found = true;
-    }
-  }
-  if (!found)
-    cout << "Customer not found." << endl;
 }

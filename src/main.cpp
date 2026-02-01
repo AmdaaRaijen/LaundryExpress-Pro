@@ -1,43 +1,60 @@
-#include <iostream>
-#include <string>
 #include "LaundryExpress.cpp"
-
-using namespace std;
 
 int main()
 {
-    int pilihan;
+    int choice;
     do
     {
-        cout << "\n--- LAUNDRYEXPRESS PRO SYSTEM ---";
-        cout << "\n1. New Order\n2. Dashboard Status\n3. Optimize Queue\n4. Search Customer\n5. Business Report\n6. Exit";
-        cout << "\nPilihan: ";
-        cin >> pilihan;
+        cout << "\n=============================================" << endl;
+        cout << "       LAUNDRY EXPRESS PRO - SYSTEM V1.0      " << endl;
+        cout << "=============================================" << endl;
+        cout << "1. Input Order Baru" << endl;
+        cout << "2. Process Order (Update Status)" << endl;
+        cout << "3. Search & Show Detail" << endl;
+        cout << "4. Calculate Estimated Time & Cost" << endl;
+        cout << "5. Generate Daily Report" << endl;
+        cout << "6. Optimize Laundry Order (Pointer)" << endl;
+        cout << "7. Analyze Customer Data" << endl;
+        cout << "8. Reset Daily Data" << endl;
+        cout << "9. Exit" << endl;
+        cout << "=============================================" << endl;
+        cout << "Pilih Menu (1-9): ";
+        cin >> choice;
+        cin.ignore(); // Membersihkan buffer enter
 
-        switch (pilihan)
+        switch (choice)
         {
         case 1:
             inputOrder();
             break;
         case 2:
-            showDashboard();
+            processOrder();
             break;
         case 3:
-            sort_by_priority(database, orderQty);
+            searchOrder();
             break;
         case 4:
-        {
-            string q;
-            cout << "Search Name: ";
-            cin >> q;
-            searchCustomer(q);
+            calculateEstimate();
             break;
-        }
         case 5:
-            cout << "\n--- Business Report ---";
+            generateReport();
             break;
+        case 6:
+            optimizeOrder();
+            break;
+        case 7:
+            showDashboard();
+            break;
+        case 8:
+            resetData();
+            break;
+        case 9:
+            cout << "Terima kasih telah menggunakan LaundryExpress Pro!";
+            break;
+        default:
+            cout << "Input salah!" << endl;
         }
-    } while (pilihan != 6);
+    } while (choice != 9);
 
     return 0;
 }
