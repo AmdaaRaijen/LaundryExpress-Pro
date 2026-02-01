@@ -23,7 +23,7 @@ int main()
             showDashboard();
             break;
         case 3:
-            cout << "Queue has been optimized.\n";
+            sort_by_priority(database, orderQty);
             break;
         case 4:
         {

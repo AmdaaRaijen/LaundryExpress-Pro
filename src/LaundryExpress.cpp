@@ -184,3 +184,17 @@ void showDashboard()
   }
   cout << string(79, '-') << endl;
 }
+
+void sort_by_priority(LaundryOrder *orders, int size)
+{
+  for (int i = 0; i < size - 1; i++)
+  {
+    for (int j = 0; j < size - i - 1; j++)
+    {
+      if ((orders + j)->priority > (orders + j + 1)->priority)
+      {
+        swap(*(orders + j), *(orders + j + 1));
+      }
+    }
+  }
+}
